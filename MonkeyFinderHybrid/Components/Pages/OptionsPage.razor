@@ -1,0 +1,81 @@
+﻿@page "/options"
+@inject IJSRuntime JS
+@using CommunityToolkit.Maui.Core.Platform
+@using CommunityToolkit.Maui.Core
+<h3>OptionsPage</h3>
+<button class="button-yellow" @onclick="CheckInternet">Check internet</button>
+<FluentMenuButton Text="Select theme color" OnMenuChanged="HandleOnMenuChanged">
+    <FluentMenuItem Id="1">Light</FluentMenuItem>
+    <FluentMenuItem Id="2">Dark</FluentMenuItem>
+    <FluentMenuItem Id="0">System</FluentMenuItem>
+</FluentMenuButton>
+
+<p class="optionstheme">Selected Theme: @selectedTheme</p>
+<FluentDesignTheme @bind-Mode="@Mode" CustomColor="#ffc107" StorageName="mytheme" />
+@code {
+    public DesignThemeModes Mode { get; set; } = DesignThemeModes.Light;
+    private async Task CheckInternet()
+    {
+        var hasInternet = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+        var internetType = Connectivity.Current.ConnectionProfiles.FirstOrDefault();
+
+        await ((Application)app).Windows[0].Page!.DisplayAlert("Connectivity status",
+        $"Internet access: {hasInternet} of type {internetType}", "OK");
+    }
+    private string selectedTheme;
+
+    public async Task HandleOnMenuChanged(MenuChangeEventArgs args)
+    {
+        selectedTheme = args.Id ?? "1";
+        Debug.WriteLine($"Selected Value: {args.Id}");
+        var selectedValue = args.Id;
+
+        if (String.Equals(selectedValue, "2"))
+        {
+            Mode = DesignThemeModes.Dark;
+            await JS.InvokeVoidAsync("setTheme", "dark");
+            ((Application)app).UserAppTheme = AppTheme.Dark;
+            if(DeviceInfo.Platform==DevicePlatform.iOS || DeviceInfo.Platform == DevicePlatform.Android)
+            {
+                StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromArgb("#444034"));
+                StatusBar.SetStyle(StatusBarStyle.LightContent);
+            }
+        }
+        else if (String.Equals(selectedValue, "1"))
+        {
+            Mode = DesignThemeModes.Light;
+            await JS.InvokeVoidAsync("setTheme", "light");
+            ((Application)app).UserAppTheme = AppTheme.Light;
+            if (DeviceInfo.Platform == DevicePlatform.Android || DeviceInfo.Platform == DevicePlatform.iOS)
+            {
+                StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromArgb("#DDAF24"));
+                StatusBar.SetStyle(StatusBarStyle.DarkContent);
+            }
+        }
+        else
+        {
+            Mode = DesignThemeModes.System;
+            AppTheme currentTheme = ((Application)app).RequestedTheme;
+            Debug.WriteLine("Current System Theme : " + currentTheme.ToString());
+
+            if (currentTheme == AppTheme.Dark)
+            {
+                await JS.InvokeVoidAsync("setTheme", "dark");
+                if (DeviceInfo.Platform == DevicePlatform.Android || DeviceInfo.Platform == DevicePlatform.iOS)
+                {
+                    StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromArgb("#444034"));
+                    StatusBar.SetStyle(StatusBarStyle.LightContent);
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("setTheme", "light");
+                if (DeviceInfo.Platform == DevicePlatform.Android || DeviceInfo.Platform == DevicePlatform.iOS)
+                {
+                    StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromArgb("#DDAF24"));
+                    StatusBar.SetStyle(StatusBarStyle.DarkContent);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,70 @@
+﻿@page "/details/{name}"
+@inject NavigationManager NavManager
+@inject MonkeyService monkeyService
+@inject RatingState ratingState
+<div>
+    <div class="detailscard-header">
+        <button class="detailsback-button" @onclick="CloseWindow">&#8592;</button>
+        <h1 class="detailstitle">@monkey.Name</h1>
+    </div>
+
+    <!-- The below code was added in this step -->
+    <div class="detailscard-image">
+        <img src="@monkey.Image">
+        <h2 class="detailsimage-title">@monkey.Name</h2>
+    </div>
+    <div class="detailscard-body">
+        <button class="detailsbutton-yellow" @onclick="OpenMap">Show on Map</button>
+        <button class="detailsbutton-yellow" @onclick="AddRating">Rate This Monkey!</button>
+        <p class="detailsdescription">@monkey.Details</p>
+        <p class="detailslocation"><strong>Location:</strong> @monkey.Location</p>
+        <p class="detailspopulation"><strong>Population:</strong> @monkey.Population</p>
+        <p class="detailsrating"><strong>Rating:</strong> @ratingState.GetRating(monkey)</p>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public string Name { get; set; }
+    private Monkey monkey { get; set; } = new();
+    [Inject]
+    private IMap map { get; set; }
+    protected override void OnInitialized()
+    {
+        monkey = monkeyService.FindMonkeyByName(Name);
+
+        ratingState.RatingChanged += (_, _) =>
+        {
+            _ = InvokeAsync(() => StateHasChanged());
+        };
+    }
+
+    private void CloseWindow()
+    {
+        NavManager.NavigateTo("/");
+    }
+
+    private void AddRating()
+    {
+        ((Application)app).Windows[0].Page!.Navigation.PushAsync(new MonkeyRatingPage(monkey, ratingState));
+    }
+
+    private async Task OpenMap()
+    {
+        try
+        {
+            if(map is null)
+            {
+                throw new Exception("Map service is not available,");
+            }
+            await map.OpenAsync(monkey.Latitude, monkey.Longitude, new MapLaunchOptions
+                {
+                    Name = monkey.Name,
+                    NavigationMode = NavigationMode.None
+                });
+        }
+        catch (Exception ex)
+        {
+            await ((Application)app).Windows[0].Page!.DisplayAlert("Error", ex.Message, "OK");
+        }
+    }
+}
